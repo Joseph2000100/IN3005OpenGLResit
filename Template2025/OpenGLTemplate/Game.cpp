@@ -60,6 +60,11 @@ Game::Game()
 	m_framesPerSecond = 0;
 	m_frameCount = 0;
 	m_elapsedTime = 0.0f;
+
+	m_gameTime = 0.0f;
+	m_playerSpeed = 0.0f;
+	m_isGameRunning = false;
+
 }
 
 // Destructor
@@ -278,6 +283,8 @@ void Game::Render()
 		//pMainProgram->SetUniform("bUseTexture", false);
 		m_pSphere->Render();
 	modelViewMatrixStack.Pop();
+
+	RenderHUD();
 		
 	// Draw the 2D graphics after the 3D graphics
 	DisplayFrameRate();
@@ -294,6 +301,11 @@ void Game::Update()
 	m_pCamera->Update(m_dt);
 
 	m_pAudio->Update();
+
+	if (m_isGameRunning) {
+		m_gameTime += (float)m_dt / 1000.0f;
+	}
+	m_playerSpeed = 100;
 }
 
 
@@ -354,6 +366,35 @@ void Game::GameLoop()
 	m_dt = m_pHighResolutionTimer->Elapsed();
 	
 
+}
+
+void Game::RenderHUD()
+{
+	// Get window dimensions
+	RECT dimensions = m_gameWindow.GetDimensions();
+	int height = dimensions.bottom - dimensions.top;
+	int width = dimensions.right - dimensions.left;
+
+	// Use the font shader program
+	CShaderProgram* fontProgram = (*m_pShaderPrograms)[1];
+	fontProgram->UseProgram();
+	glDisable(GL_DEPTH_TEST);
+
+	// Set up the orthographic projection matrix
+	fontProgram->SetUniform("matrices.projMatrix", m_pCamera->GetOrthographicProjectionMatrix());
+	fontProgram->SetUniform("matrices.modelViewMatrix", glm::mat4(1));
+	fontProgram->SetUniform("vColour", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+	// Format time as minutes:seconds.milliseconds
+	int minutes = (int)m_gameTime / 60;
+	int seconds = (int)m_gameTime % 60;
+	int milliseconds = (int)((m_gameTime - (int)m_gameTime) * 100);
+
+	// Render time in top left corner
+	m_pFtFont->Render(20, height - 40, 20, "Time: %02d:%02d.%02d", minutes, seconds, milliseconds);
+
+	// Render speed in top right corner
+	m_pFtFont->Render(width - 200, height - 40, 20, "Speed: %.1f km/h", m_playerSpeed);
 }
 
 
@@ -437,6 +478,12 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 			break;
 		case VK_F1:
 			m_pAudio->PlayEventSound();
+			break;
+		case VK_SPACE:
+			m_isGameRunning = !m_isGameRunning;
+			break;
+		case 'R':
+			m_gameTime = 0.0f;
 			break;
 		}
 		break;

@@ -59,5 +59,10 @@ private:
 	int m_frameCount;
 	double m_elapsedTime;
 
+	float m_gameTime;
+	float m_playerSpeed;
+	bool m_isGameRunning;
+	void RenderHUD();
+
 
 };
