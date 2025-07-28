@@ -173,8 +173,8 @@ void Game::Initialise()
 	m_pFtFont->SetShaderProgram(pFontProgram);
 
 	// Load some meshes in OBJ format
-	m_pBarrelMesh->Load("resources\\models\\Barrel\\Barrel02.obj");  // Downloaded from http://www.psionicgames.com/?page_id=24 on 24 Jan 2013
-	m_pHorseMesh->Load("resources\\models\\Horse\\Horse2.obj");  // Downloaded from http://opengameart.org/content/horse-lowpoly on 24 Jan 2013
+	//m_pBarrelMesh->Load("resources\\models\\Barrel\\Barrel02.obj");  // Downloaded from http://www.psionicgames.com/?page_id=24 on 24 Jan 2013
+	//m_pHorseMesh->Load("resources\\models\\Horse\\Horse2.obj");  // Downloaded from http://opengameart.org/content/horse-lowpoly on 24 Jan 2013
 	//m_pCarMesh->Load("resources\\models\\Car\\car.obj");  
 	//m_pBarrierMesh->Load("resources\\models\\Barrier\\cone.obj"); 
 
@@ -260,7 +260,7 @@ void Game::Render()
 
 
 	// Render the horse 
-	modelViewMatrixStack.Push();
+	/*modelViewMatrixStack.Push();
 		modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
 		modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 180.0f);
 		modelViewMatrixStack.Scale(2.5f);
@@ -278,6 +278,7 @@ void Game::Render()
 		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
 		m_pBarrelMesh->Render();
 	modelViewMatrixStack.Pop();
+	*/
 	
 	// Render the car
 	modelViewMatrixStack.Push();
@@ -298,7 +299,7 @@ void Game::Render()
 		m_pBarrierMesh->Render();
 	modelViewMatrixStack.Pop();
 
-
+	/*
 	// Render the sphere
 	modelViewMatrixStack.Push();
 		modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, 150.0f));
@@ -309,6 +310,7 @@ void Game::Render()
 		//pMainProgram->SetUniform("bUseTexture", false);
 		m_pSphere->Render();
 	modelViewMatrixStack.Pop();
+	*/
 
 	RenderHUD();
 		
