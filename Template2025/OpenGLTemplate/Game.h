@@ -51,6 +51,7 @@ private:
 	CCatmullRom* m_pCatmullRom;
 
 	bool m_topDownView;
+	bool m_freeCamera;
 
 
 public:

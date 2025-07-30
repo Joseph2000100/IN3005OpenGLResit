@@ -68,6 +68,7 @@ Game::Game()
 	m_playerSpeed = 0.0f;
 	m_isGameRunning = false;
 	m_topDownView = false;
+	m_freeCamera = false;
 
 	m_currentDistance = 0.0f;
 	m_cameraSpeed = 0.1f;
@@ -343,16 +344,22 @@ void Game::Render()
 }
 
 // Update method runs repeatedly with the Render method
-void Game::Update() 
+void Game::Update()
 {
-	if (m_topDownView) {
-		// Top-down view - position camera high above the track center
-		glm::vec3 trackCenter(70.0f, 220.0f, 80.0f); // Adjust height as needed
-		glm::vec3 lookDown(0.0f, -1.0f, 0.0f);
+	if (m_freeCamera) {
+		// Allow camera to be controlled freely
+		m_pCamera->Update(m_dt);
+	}
+	else if (m_topDownView) {
+		// Provides a top down view
+		glm::vec3 cameraPos(65.0f, 220.0f, 70.0f);
+		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);  
 		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
-		m_pCamera->Set(trackCenter, trackCenter + lookDown, upVector);
+		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
+
 	}
 	else {
+
 		// Your existing camera update code for normal view
 		glm::vec3 currentPos, nextPos;
 		m_pCatmullRom->Sample(m_currentDistance, currentPos);
@@ -577,6 +584,9 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 			break;
 		case 'V':
 			m_topDownView = !m_topDownView;
+			break;
+		case 'F':
+			m_freeCamera = !m_freeCamera;
 			break;
 		}
 		break;
