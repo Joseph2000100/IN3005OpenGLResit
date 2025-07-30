@@ -16,6 +16,7 @@ class CHighResolutionTimer;
 class CSphere;
 class COpenAssetImportMesh;
 class CAudio;
+class CCatmullRom;
 
 class Game {
 private:
@@ -42,6 +43,14 @@ private:
 	double m_dt;
 	int m_framesPerSecond;
 	bool m_appActive;
+
+	// Track members
+	float m_currentDistance;
+	float m_cameraSpeed;
+	float m_cameraRotation;
+	CCatmullRom* m_pCatmullRom;
+
+	bool m_topDownView;
 
 
 public:

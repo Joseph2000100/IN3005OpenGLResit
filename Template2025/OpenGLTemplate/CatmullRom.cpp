@@ -32,8 +32,23 @@ glm::vec3 CCatmullRom::Interpolate(glm::vec3& p0, glm::vec3& p1, glm::vec3& p2, 
 void CCatmullRom::SetControlPoints()
 {
 	// Set control points (m_controlPoints) here, or load from disk
+	m_controlPoints.clear();
+	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+	m_controlPoints.push_back(glm::vec3(100.0f, 0.0f, 0.0f));
+	m_controlPoints.push_back(glm::vec3(150.0f, 0.0f, 50.0f));
+	m_controlPoints.push_back(glm::vec3(150.0f, 0.0f, 100.0f));
+	m_controlPoints.push_back(glm::vec3(100.0f, 0.0f, 150.0f));
+	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 150.0f));
+	m_controlPoints.push_back(glm::vec3(-50.0f, 0.0f, 100.0f));
+	m_controlPoints.push_back(glm::vec3(-50.0f, 0.0f, 0.0f));
+	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
 
 	// Optionally, set upvectors (m_controlUpVectors, one for each control point as well)
+	m_controlUpVectors.clear();
+	for (int i = 0; i < m_controlPoints.size(); i++) {
+		m_controlUpVectors.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
+	}
+
 }
 
 
@@ -149,28 +164,115 @@ void CCatmullRom::UniformlySampleControlPoints(int numSamples)
 void CCatmullRom::CreateCentreline()
 {
 	// Call Set Control Points
+	SetControlPoints();
 
 	// Call UniformlySampleControlPoints with the number of samples required
+	UniformlySampleControlPoints(1000);
 
 	// Create a VAO called m_vaoCentreline and a VBO to get the points onto the graphics card
+	glGenVertexArrays(1, &m_vaoCentreline);
+	glBindVertexArray(m_vaoCentreline);
+
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, m_centrelinePoints.size() * sizeof(glm::vec3), &m_centrelinePoints[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindVertexArray(0);
+
 }
 
 
 void CCatmullRom::CreateOffsetCurves()
 {
 	// Compute the offset curves, one left, and one right.  Store the points in m_leftOffsetPoints and m_rightOffsetPoints respectively
+	const float trackWidth = 10.0f; // Adjust this value for desired track width
+
+	m_leftOffsetPoints.clear();
+	m_rightOffsetPoints.clear();
+
+	for (size_t i = 0; i < m_centrelinePoints.size(); i++) {
+		glm::vec3 forward = (i < m_centrelinePoints.size() - 1) ?
+			glm::normalize(m_centrelinePoints[i + 1] - m_centrelinePoints[i]) :
+			glm::normalize(m_centrelinePoints[0] - m_centrelinePoints[i]);
+
+		glm::vec3 right = glm::normalize(glm::cross(forward, m_centrelineUpVectors[i]));
+
+		m_leftOffsetPoints.push_back(m_centrelinePoints[i] - right * trackWidth);
+		m_rightOffsetPoints.push_back(m_centrelinePoints[i] + right * trackWidth);
+	}
 
 	// Generate two VAOs called m_vaoLeftOffsetCurve and m_vaoRightOffsetCurve, each with a VBO, and get the offset curve points on the graphics card
 	// Note it is possible to only use one VAO / VBO with all the points instead.
+	glGenVertexArrays(1, &m_vaoLeftOffsetCurve);
+	glBindVertexArray(m_vaoLeftOffsetCurve);
+	GLuint vboLeft;
+	glGenBuffers(1, &vboLeft);
+	glBindBuffer(GL_ARRAY_BUFFER, vboLeft);
+	glBufferData(GL_ARRAY_BUFFER, m_leftOffsetPoints.size() * sizeof(glm::vec3), &m_leftOffsetPoints[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+	glGenVertexArrays(1, &m_vaoRightOffsetCurve);
+	glBindVertexArray(m_vaoRightOffsetCurve);
+	GLuint vboRight;
+	glGenBuffers(1, &vboRight);
+	glBindBuffer(GL_ARRAY_BUFFER, vboRight);
+	glBufferData(GL_ARRAY_BUFFER, m_rightOffsetPoints.size() * sizeof(glm::vec3), &m_rightOffsetPoints[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindVertexArray(0);
 
 }
 
 
 void CCatmullRom::CreateTrack()
 {
-
 	// Generate a VAO called m_vaoTrack and a VBO to get the offset curve points and indices on the graphics card
+	std::vector<glm::vec3> vertices;
+	std::vector<GLuint> indices;
+
+	// Create track vertices by connecting left and right offset curves
+	for (size_t i = 0; i < m_leftOffsetPoints.size(); i++) {
+		vertices.push_back(m_leftOffsetPoints[i]);
+		vertices.push_back(m_rightOffsetPoints[i]);
+	}
+
+	// Create indices for triangle strip
+	for (GLuint i = 0; i < (GLuint)m_leftOffsetPoints.size() - 1; i++) {
+		indices.push_back(i * 2);
+		indices.push_back(i * 2 + 1);
+		indices.push_back(i * 2 + 2);
+		indices.push_back(i * 2 + 1);
+		indices.push_back(i * 2 + 2);
+		indices.push_back(i * 2 + 3);
+	}
+
+	m_vertexCount = indices.size();
+
+	glGenVertexArrays(1, &m_vaoTrack);
+	glBindVertexArray(m_vaoTrack);
+
+	// Create and populate VBO for vertices
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+
+	// Create and populate VBO for indices
+	GLuint ibo;
+	glGenBuffers(1, &ibo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindVertexArray(0);
 
 }
 
@@ -178,20 +280,27 @@ void CCatmullRom::CreateTrack()
 void CCatmullRom::RenderCentreline()
 {
 	// Bind the VAO m_vaoCentreline and render it
-
+	glBindVertexArray(m_vaoCentreline);
+	glDrawArrays(GL_LINE_STRIP, 0, m_centrelinePoints.size());
 }
 
 void CCatmullRom::RenderOffsetCurves()
 {
 	// Bind the VAO m_vaoLeftOffsetCurve and render it
+	glBindVertexArray(m_vaoLeftOffsetCurve);
+	glDrawArrays(GL_LINE_STRIP, 0, m_leftOffsetPoints.size());
 
 	// Bind the VAO m_vaoRightOffsetCurve and render it
+	glBindVertexArray(m_vaoRightOffsetCurve);
+	glDrawArrays(GL_LINE_STRIP, 0, m_rightOffsetPoints.size());
 }
 
 
 void CCatmullRom::RenderTrack()
 {
 	// Bind the VAO m_vaoTrack and render it
+	glBindVertexArray(m_vaoTrack);
+	glDrawElements(GL_TRIANGLES, m_vertexCount, GL_UNSIGNED_INT, 0);
 }
 
 int CCatmullRom::CurrentLap(float d)

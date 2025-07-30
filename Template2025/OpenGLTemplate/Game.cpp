@@ -41,6 +41,7 @@ Source code drawn from a number of sources and examples, including contributions
 #include "MatrixStack.h"
 #include "OpenAssetImportMesh.h"
 #include "Audio.h"
+#include "CatmullRom.h"
 
 // Constructor
 Game::Game()
@@ -66,6 +67,13 @@ Game::Game()
 	m_gameTime = 0.0f;
 	m_playerSpeed = 0.0f;
 	m_isGameRunning = false;
+	m_topDownView = false;
+
+	m_currentDistance = 0.0f;
+	m_cameraSpeed = 0.1f;
+	m_cameraRotation = 0.0f;
+	m_pCatmullRom = NULL;
+
 
 }
 
@@ -83,6 +91,7 @@ Game::~Game()
 	delete m_pBarrierMesh;
 	delete m_pSphere;
 	delete m_pAudio;
+	delete m_pCatmullRom;
 
 	if (m_pShaderPrograms != NULL) {
 		for (unsigned int i = 0; i < m_pShaderPrograms->size(); i++)
@@ -181,6 +190,12 @@ void Game::Initialise()
 	// Create a sphere
 	m_pSphere->Create("resources\\textures\\", "dirtpile01.jpg", 25, 25);  // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
 	glEnable(GL_CULL_FACE);
+
+	// Create the catmull rom spline
+	m_pCatmullRom = new CCatmullRom();
+	m_pCatmullRom->CreateCentreline();
+	m_pCatmullRom->CreateOffsetCurves();
+	m_pCatmullRom->CreateTrack();
 
 	// Initialise audio and play background music
 	m_pAudio->Initialise();
@@ -312,6 +327,11 @@ void Game::Render()
 	modelViewMatrixStack.Pop();
 	*/
 
+	// Render the track
+	m_pCatmullRom->RenderCentreline();
+	m_pCatmullRom->RenderOffsetCurves();
+	m_pCatmullRom->RenderTrack();
+
 	RenderHUD();
 		
 	// Draw the 2D graphics after the 3D graphics
@@ -325,6 +345,36 @@ void Game::Render()
 // Update method runs repeatedly with the Render method
 void Game::Update() 
 {
+	if (m_topDownView) {
+		// Top-down view - position camera high above the track center
+		glm::vec3 trackCenter(70.0f, 220.0f, 80.0f); // Adjust height as needed
+		glm::vec3 lookDown(0.0f, -1.0f, 0.0f);
+		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
+		m_pCamera->Set(trackCenter, trackCenter + lookDown, upVector);
+	}
+	else {
+		// Your existing camera update code for normal view
+		glm::vec3 currentPos, nextPos;
+		m_pCatmullRom->Sample(m_currentDistance, currentPos);
+		m_pCatmullRom->Sample(m_currentDistance + 1.0f, nextPos);
+
+		// Calculate TNB frame
+		glm::vec3 T = glm::normalize(nextPos - currentPos);
+		glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+		glm::vec3 rotatedUp = glm::rotate(worldUp, m_cameraRotation, T);
+		glm::vec3 N = glm::normalize(glm::cross(T, rotatedUp));
+		glm::vec3 B = glm::normalize(glm::cross(N, T));
+
+		glm::vec3 cameraPos = currentPos + B * 2.0f;
+		glm::vec3 lookAtPoint = currentPos + T * 10.0f;
+
+		m_pCamera->Set(cameraPos, lookAtPoint, rotatedUp);
+
+		// Only update distance when not in top-down view
+		m_currentDistance += m_dt * m_cameraSpeed;
+	}
+
 	// Update the camera using the amount of time that has elapsed to avoid framerate dependent motion
 	m_pCamera->Update(m_dt);
 
@@ -512,6 +562,21 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 			break;
 		case 'R':
 			m_gameTime = 0.0f;
+			break;
+		case VK_LEFT:
+			m_cameraRotation -= m_dt * 0.1f;
+			break;
+		case VK_RIGHT:
+			m_cameraRotation += m_dt * 0.1f;
+			break;
+		case VK_UP:
+			m_cameraSpeed += 0.01f;
+			break;
+		case VK_DOWN:
+			m_cameraSpeed = max(0.0f, m_cameraSpeed - 0.01f);
+			break;
+		case 'V':
+			m_topDownView = !m_topDownView;
 			break;
 		}
 		break;
