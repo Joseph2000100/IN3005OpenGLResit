@@ -42,6 +42,8 @@ Source code drawn from a number of sources and examples, including contributions
 #include "OpenAssetImportMesh.h"
 #include "Audio.h"
 #include "CatmullRom.h"
+#include "Pyramid.h"
+#include "Cuboid.h"
 
 // Constructor
 Game::Game()
@@ -56,6 +58,8 @@ Game::Game()
 	m_pCarMesh = NULL;
 	m_pBarrierMesh = NULL;
 	m_pSphere = NULL;
+	m_pPyramid = NULL;
+	m_pCuboid = NULL;
 	m_pHighResolutionTimer = NULL;
 	m_pAudio = NULL;
 
@@ -93,6 +97,8 @@ Game::~Game()
 	delete m_pSphere;
 	delete m_pAudio;
 	delete m_pCatmullRom;
+	delete m_pPyramid;
+	delete m_pCuboid;
 
 	if (m_pShaderPrograms != NULL) {
 		for (unsigned int i = 0; i < m_pShaderPrograms->size(); i++)
@@ -122,6 +128,8 @@ void Game::Initialise()
 	m_pCarMesh = new COpenAssetImportMesh;
 	m_pBarrierMesh = new COpenAssetImportMesh;
 	m_pSphere = new CSphere;
+	m_pPyramid = new CPyramid;
+	m_pCuboid = new CCuboid;
 	m_pAudio = new CAudio;
 
 	RECT dimensions = m_gameWindow.GetDimensions();
@@ -187,6 +195,12 @@ void Game::Initialise()
 	//m_pHorseMesh->Load("resources\\models\\Horse\\Horse2.obj");  // Downloaded from http://opengameart.org/content/horse-lowpoly on 24 Jan 2013
 	//m_pCarMesh->Load("resources\\models\\Car\\car.obj");  
 	//m_pBarrierMesh->Load("resources\\models\\Barrier\\cone.obj"); 
+
+	// Create a pyramid
+	m_pPyramid->Create(2.0f, 3.0f);
+
+	// Create a cuboid
+	m_pCuboid->Create(2.0f, 3.0f, 1.0f);
 
 	// Create a sphere
 	m_pSphere->Create("resources\\textures\\", "dirtpile01.jpg", 25, 25);  // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
@@ -327,6 +341,35 @@ void Game::Render()
 		m_pSphere->Render();
 	modelViewMatrixStack.Pop();
 	*/
+
+	pMainProgram->SetUniform("bUseTexture", false);  // Turn off texturing
+	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f, 0.5f, 0.2f));  // Ambient color (green-ish)
+	pMainProgram->SetUniform("material1.Md", glm::vec3(0.2f, 0.5f, 0.2f));  // Diffuse color (green-ish)
+	pMainProgram->SetUniform("material1.Ms", glm::vec3(1.0f));  // Specular color (white)
+	pMainProgram->SetUniform("material1.shininess", 50.0f);     // Shininess
+
+	// Render the Pyramid
+	modelViewMatrixStack.Push();
+		modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, -150.0f));
+		modelViewMatrixStack.Scale(1.0f);
+		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+		m_pPyramid->Render();
+	modelViewMatrixStack.Pop();
+
+	pMainProgram->SetUniform("bUseTexture", true);
+
+	// Render the cuboid
+	pMainProgram->SetUniform("bUseTexture", false);
+		modelViewMatrixStack.Push();
+		modelViewMatrixStack.Translate(glm::vec3(5.0f, 2.0f, -150.0f));  // Position it where you want
+		modelViewMatrixStack.Scale(1.0f);
+		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+		m_pCuboid->Render();
+	modelViewMatrixStack.Pop();
+	pMainProgram->SetUniform("bUseTexture", true);
+
 
 	// Render the track
 	m_pCatmullRom->RenderCentreline();

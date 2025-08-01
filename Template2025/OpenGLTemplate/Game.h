@@ -17,6 +17,8 @@ class CSphere;
 class COpenAssetImportMesh;
 class CAudio;
 class CCatmullRom;
+class CPyramid;
+class CCuboid;
 
 class Game {
 private:
@@ -33,9 +35,11 @@ private:
 	CFreeTypeFont *m_pFtFont;
 	COpenAssetImportMesh *m_pBarrelMesh;
 	COpenAssetImportMesh *m_pHorseMesh;
-	COpenAssetImportMesh* m_pCarMesh;
-	COpenAssetImportMesh* m_pBarrierMesh;
+	COpenAssetImportMesh *m_pCarMesh;
+	COpenAssetImportMesh *m_pBarrierMesh;
 	CSphere *m_pSphere;
+	CPyramid *m_pPyramid;
+	CCuboid* m_pCuboid;
 	CHighResolutionTimer *m_pHighResolutionTimer;
 	CAudio *m_pAudio;
 
