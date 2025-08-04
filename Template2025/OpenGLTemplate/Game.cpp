@@ -79,6 +79,14 @@ Game::Game()
 	m_cameraRotation = 0.0f;
 	m_pCatmullRom = NULL;
 
+	m_startSequenceActive = false;
+	m_startSequenceTimer = 0.0f;
+	m_startLightStates = std::vector<bool>(3, false);
+	m_goLightActive = false;
+
+	m_startLightPositions[0] = glm::vec4(-2.0f, 10.0f, 0.0f, 1.0f);
+	m_startLightPositions[1] = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f);
+	m_startLightPositions[2] = glm::vec4(2.0f, 10.0f, 0.0f, 1.0f);
 
 }
 
@@ -288,6 +296,42 @@ void Game::Render()
 	pMainProgram->SetUniform("material1.Md", glm::vec3(0.5f));	// Diffuse material reflectance
 	pMainProgram->SetUniform("material1.Ms", glm::vec3(1.0f));	// Specular material reflectance	
 
+	// Render the start lights
+	if (m_startSequenceActive || m_goLightActive) {
+		pMainProgram->SetUniform("bUseTexture", false);
+
+		// Render each light sphere
+		for (int i = 0; i < 3; i++) {
+			modelViewMatrixStack.Push();
+			modelViewMatrixStack.Translate(glm::vec3(-2.0f + i * 2.0f, 10.0f, 0.0f));
+			modelViewMatrixStack.Scale(glm::vec3(0.3f));
+
+			if (m_goLightActive) {
+				// Green for GO
+				pMainProgram->SetUniform("material1.Ma", glm::vec3(0.0f, 1.0f, 0.0f));
+				pMainProgram->SetUniform("material1.Md", glm::vec3(0.0f, 1.0f, 0.0f));
+				pMainProgram->SetUniform("material1.Me", glm::vec3(0.0f, 5.0f, 0.0f));
+			}
+			else if (m_startLightStates[i]) {
+				// Red for countdown
+				pMainProgram->SetUniform("material1.Ma", glm::vec3(1.0f, 0.0f, 0.0f));
+				pMainProgram->SetUniform("material1.Md", glm::vec3(1.0f, 0.0f, 0.0f));
+				pMainProgram->SetUniform("material1.Me", glm::vec3(5.0f, 0.0f, 0.0f));
+			}
+			else {
+				// Dark gray for off state
+				pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f));
+				pMainProgram->SetUniform("material1.Md", glm::vec3(0.2f));
+				pMainProgram->SetUniform("material1.Me", glm::vec3(0.0f));
+			}
+			pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+			pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+			m_pSphere->Render();
+			modelViewMatrixStack.Pop();
+		}
+		pMainProgram->SetUniform("bUseTexture", true);
+	}
+
 
 	// Render the horse 
 	/*modelViewMatrixStack.Push();
@@ -399,7 +443,6 @@ void Game::Update()
 		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);
 		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
 		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
-
 	}
 	else {
 
@@ -423,6 +466,34 @@ void Game::Update()
 
 		// Only update distance when not in top-down view
 		m_currentDistance += m_dt * m_cameraSpeed;
+	}
+
+	// Start Lights
+	if (m_startSequenceActive) {
+		m_startSequenceTimer += m_dt / 1000.0f; // Convert to seconds
+
+		// Turn on lights sequentially
+		if (m_startSequenceTimer >= 1.0f && !m_startLightStates[0]) {
+			m_startLightStates[0] = true;
+		}
+		if (m_startSequenceTimer >= 2.0f && !m_startLightStates[1]) {
+			m_startLightStates[1] = true;
+		}
+		if (m_startSequenceTimer >= 3.0f && !m_startLightStates[2]) {
+			m_startLightStates[2] = true;
+		}
+
+		// Flash all lights for "GO"
+		if (m_startSequenceTimer >= 4.0f && !m_goLightActive) {
+			m_goLightActive = true;
+		}
+
+		// End sequence and turn off lights
+		if (m_startSequenceTimer >= 4.5f) {
+			m_startSequenceActive = false;
+			m_startLightStates = std::vector<bool>(3, false);
+			m_goLightActive = false;
+		}
 	}
 
 	// Update the camera using the amount of time that has elapsed to avoid framerate dependent motion
@@ -635,6 +706,14 @@ LRESULT Game::ProcessEvents(HWND window, UINT message, WPARAM w_param, LPARAM l_
 			break;
 		case 'F':
 			m_freeCamera = !m_freeCamera;
+			break;
+		case 'S':
+			if (!m_startSequenceActive) {
+				m_startSequenceActive = true;
+				m_startSequenceTimer = 0.0f;
+				m_startLightStates = std::vector<bool>(3, false);
+				m_goLightActive = false;
+			}
 			break;
 		}
 		break;

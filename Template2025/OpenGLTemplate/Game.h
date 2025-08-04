@@ -80,5 +80,10 @@ private:
 	bool m_isGameRunning;
 	void RenderHUD();
 
+	bool m_startSequenceActive;
+	float m_startSequenceTimer;
+	std::vector<bool> m_startLightStates;
+	glm::vec4 m_startLightPositions[3];
+	bool m_goLightActive;
 
 };
