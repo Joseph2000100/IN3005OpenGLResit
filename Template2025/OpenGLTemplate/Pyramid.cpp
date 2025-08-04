@@ -2,7 +2,12 @@
 #include "Pyramid.h"
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-CPyramid::CPyramid()
+CPyramid::CPyramid() :
+    m_vao(0),
+    m_width(0),
+    m_height(0),
+    m_blinkTimer(0.0f),
+    m_isVisible(true)
 {
 }
 
@@ -31,7 +36,7 @@ void CPyramid::Create(float width, float height)
         glm::vec3(-halfWidth, 0.0f, halfWidth),
 
         // Base - Triangle 2 
-        glm::vec3(-halfWidth, 0.0f, -halfWidth), 
+        glm::vec3(-halfWidth, 0.0f, -halfWidth),
         glm::vec3(halfWidth, 0.0f, -halfWidth),
         glm::vec3(halfWidth, 0.0f, halfWidth),
 
@@ -111,6 +116,9 @@ void CPyramid::Create(float width, float height)
 
 void CPyramid::Render()
 {
+    if (!m_isVisible)
+        return;
+    
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, 18);  // 6 triangles * 3 vertices
 }
@@ -119,4 +127,16 @@ void CPyramid::Release()
 {
     glDeleteVertexArrays(1, &m_vao);
     m_vbo.Release();
+}
+
+void CPyramid::Update(float dt)
+{
+    m_blinkTimer += dt;
+
+    // Toggle visibility every 0.5 seconds
+    if (m_blinkTimer >= 500.0f)
+    {
+        m_blinkTimer = 0.0f;
+        m_isVisible = !m_isVisible;
+    }
 }

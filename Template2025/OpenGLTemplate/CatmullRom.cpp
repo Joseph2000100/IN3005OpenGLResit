@@ -11,6 +11,11 @@ CCatmullRom::CCatmullRom()
 
 CCatmullRom::~CCatmullRom()
 {
+	m_texture.Release();
+	m_trackVBO.Release();
+	if (m_vaoTrack != 0) {
+		glDeleteVertexArrays(1, &m_vaoTrack);
+	}
 }
 
 // Perform Catmull Rom spline interpolation between four points, interpolating the space between p1 and p2
@@ -33,15 +38,18 @@ void CCatmullRom::SetControlPoints()
 {
 	// Set control points (m_controlPoints) here, or load from disk
 	m_controlPoints.clear();
-	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
-	m_controlPoints.push_back(glm::vec3(100.0f, 0.0f, 0.0f));
-	m_controlPoints.push_back(glm::vec3(150.0f, 0.0f, 50.0f));
-	m_controlPoints.push_back(glm::vec3(150.0f, 0.0f, 100.0f));
-	m_controlPoints.push_back(glm::vec3(100.0f, 0.0f, 150.0f));
-	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 150.0f));
-	m_controlPoints.push_back(glm::vec3(-50.0f, 0.0f, 100.0f));
-	m_controlPoints.push_back(glm::vec3(-50.0f, 0.0f, 0.0f));
-	m_controlPoints.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	const float trackHeight = 0.5f;
+
+	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 0.0f));
+	m_controlPoints.push_back(glm::vec3(100.0f, trackHeight, 0.0f));
+	m_controlPoints.push_back(glm::vec3(150.0f, trackHeight, 50.0f));
+	m_controlPoints.push_back(glm::vec3(150.0f, trackHeight, 100.0f));
+	m_controlPoints.push_back(glm::vec3(100.0f, trackHeight, 150.0f));
+	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 150.0f));
+	m_controlPoints.push_back(glm::vec3(-50.0f, trackHeight, 100.0f));
+	m_controlPoints.push_back(glm::vec3(-50.0f, trackHeight, 0.0f));
+	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 0.0f));
 
 	// Optionally, set upvectors (m_controlUpVectors, one for each control point as well)
 	m_controlUpVectors.clear();
@@ -229,52 +237,43 @@ void CCatmullRom::CreateOffsetCurves()
 
 }
 
-
 void CCatmullRom::CreateTrack()
 {
-	// Generate a VAO called m_vaoTrack and a VBO to get the offset curve points and indices on the graphics card
-	std::vector<glm::vec3> vertices;
-	std::vector<GLuint> indices;
+	vector<glm::vec3> vertices;
 
-	// Create track vertices by connecting left and right offset curves
-	for (size_t i = 0; i < m_leftOffsetPoints.size(); i++) {
+	// Create vertices for track segments
+	for (size_t i = 0; i < m_centrelinePoints.size() - 1; ++i) {
+		// Add vertices for current segment
 		vertices.push_back(m_leftOffsetPoints[i]);
 		vertices.push_back(m_rightOffsetPoints[i]);
+		vertices.push_back(m_rightOffsetPoints[i + 1]);
+		vertices.push_back(m_leftOffsetPoints[i + 1]);
 	}
 
-	// Create indices for triangle strip
-	for (GLuint i = 0; i < (GLuint)m_leftOffsetPoints.size() - 1; i++) {
-		indices.push_back(i * 2);
-		indices.push_back(i * 2 + 1);
-		indices.push_back(i * 2 + 2);
-		indices.push_back(i * 2 + 1);
-		indices.push_back(i * 2 + 2);
-		indices.push_back(i * 2 + 3);
-	}
-
-	m_vertexCount = indices.size();
-
+	// Create and bind VAO
 	glGenVertexArrays(1, &m_vaoTrack);
 	glBindVertexArray(m_vaoTrack);
 
-	// Create and populate VBO for vertices
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+	// Create and bind VBO
+	m_trackVBO.Create();
+	m_trackVBO.Bind();
 
-	// Create and populate VBO for indices
-	GLuint ibo;
-	glGenBuffers(1, &ibo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
+	// Add data to VBO
+	for (size_t i = 0; i < vertices.size(); i++) {
+		m_trackVBO.AddData(vertices.data() + i, sizeof(glm::vec3));
+	}
 
-	glEnableVertexAttribArray(0);
+	m_trackVBO.UploadDataToGPU(GL_STATIC_DRAW);
+
+	// Set up vertex attributes
+	glEnableVertexAttribArray(0); // position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glBindVertexArray(0);
+	m_vertexCount = vertices.size();
 
+	glBindVertexArray(0);
 }
+
 
 
 void CCatmullRom::RenderCentreline()
@@ -283,6 +282,7 @@ void CCatmullRom::RenderCentreline()
 	glBindVertexArray(m_vaoCentreline);
 	glDrawArrays(GL_LINE_STRIP, 0, m_centrelinePoints.size());
 }
+
 
 void CCatmullRom::RenderOffsetCurves()
 {
@@ -298,10 +298,11 @@ void CCatmullRom::RenderOffsetCurves()
 
 void CCatmullRom::RenderTrack()
 {
-	// Bind the VAO m_vaoTrack and render it
 	glBindVertexArray(m_vaoTrack);
-	glDrawElements(GL_TRIANGLES, m_vertexCount, GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_QUADS, 0, m_vertexCount);
+	glBindVertexArray(0);
 }
+
 
 int CCatmullRom::CurrentLap(float d)
 {

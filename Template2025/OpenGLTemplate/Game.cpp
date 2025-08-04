@@ -1,4 +1,4 @@
-/* 
+/*
 OpenGL Template for INM376 / IN3005
 City University London, School of Mathematics, Computer Science and Engineering
 Source code drawn from a number of sources and examples, including contributions from
@@ -9,11 +9,11 @@ Source code drawn from a number of sources and examples, including contributions
 
  This template contains a skybox, simple terrain, camera, lighting, shaders, texturing
 
- Potential ways to modify the code:  Add new geometry types, shaders, change the terrain, load new meshes, change the lighting, 
+ Potential ways to modify the code:  Add new geometry types, shaders, change the terrain, load new meshes, change the lighting,
  different camera controls, different shaders, etc.
- 
+
  Template version 5.0a 29/01/2017
- Dr Greg Slabaugh (gregory.slabaugh.1@city.ac.uk) 
+ Dr Greg Slabaugh (gregory.slabaugh.1@city.ac.uk)
 
  version 6.0a 29/01/2019
  Dr Eddie Edwards (Philip.Edwards@city.ac.uk)
@@ -83,8 +83,8 @@ Game::Game()
 }
 
 // Destructor
-Game::~Game() 
-{ 
+Game::~Game()
+{
 	//game objects
 	delete m_pCamera;
 	delete m_pSkybox;
@@ -111,7 +111,7 @@ Game::~Game()
 }
 
 // Initialisation:  This method only runs once at startup
-void Game::Initialise() 
+void Game::Initialise()
 {
 	// Set the clear colour and depth
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -120,7 +120,7 @@ void Game::Initialise()
 	/// Create objects
 	m_pCamera = new CCamera;
 	m_pSkybox = new CSkybox;
-	m_pShaderPrograms = new vector <CShaderProgram *>;
+	m_pShaderPrograms = new vector <CShaderProgram*>;
 	m_pPlanarTerrain = new CPlane;
 	m_pFtFont = new CFreeTypeFont;
 	m_pBarrelMesh = new COpenAssetImportMesh;
@@ -138,8 +138,8 @@ void Game::Initialise()
 	int height = dimensions.bottom - dimensions.top;
 
 	// Set the orthographic and perspective projection matrices based on the image size
-	m_pCamera->SetOrthographicProjectionMatrix(width, height); 
-	m_pCamera->SetPerspectiveProjectionMatrix(45.0f, (float) width / (float) height, 0.5f, 5000.0f);
+	m_pCamera->SetOrthographicProjectionMatrix(width, height);
+	m_pCamera->SetPerspectiveProjectionMatrix(45.0f, (float)width / (float)height, 0.5f, 5000.0f);
 
 	// Load shaders
 	vector<CShader> shShaders;
@@ -149,8 +149,8 @@ void Game::Initialise()
 	sShaderFileNames.push_back("textShader.vert");
 	sShaderFileNames.push_back("textShader.frag");
 
-	for (int i = 0; i < (int) sShaderFileNames.size(); i++) {
-		string sExt = sShaderFileNames[i].substr((int) sShaderFileNames[i].size()-4, 4);
+	for (int i = 0; i < (int)sShaderFileNames.size(); i++) {
+		string sExt = sShaderFileNames[i].substr((int)sShaderFileNames[i].size() - 4, 4);
 		int iShaderType;
 		if (sExt == "vert") iShaderType = GL_VERTEX_SHADER;
 		else if (sExt == "frag") iShaderType = GL_FRAGMENT_SHADER;
@@ -158,12 +158,12 @@ void Game::Initialise()
 		else if (sExt == "tcnl") iShaderType = GL_TESS_CONTROL_SHADER;
 		else iShaderType = GL_TESS_EVALUATION_SHADER;
 		CShader shader;
-		shader.LoadShader("resources\\shaders\\"+sShaderFileNames[i], iShaderType);
+		shader.LoadShader("resources\\shaders\\" + sShaderFileNames[i], iShaderType);
 		shShaders.push_back(shader);
 	}
 
 	// Create the main shader program
-	CShaderProgram *pMainProgram = new CShaderProgram;
+	CShaderProgram* pMainProgram = new CShaderProgram;
 	pMainProgram->CreateProgram();
 	pMainProgram->AddShaderToProgram(&shShaders[0]);
 	pMainProgram->AddShaderToProgram(&shShaders[1]);
@@ -171,7 +171,7 @@ void Game::Initialise()
 	m_pShaderPrograms->push_back(pMainProgram);
 
 	// Create a shader program for fonts
-	CShaderProgram *pFontProgram = new CShaderProgram;
+	CShaderProgram* pFontProgram = new CShaderProgram;
 	pFontProgram->CreateProgram();
 	pFontProgram->AddShaderToProgram(&shShaders[2]);
 	pFontProgram->AddShaderToProgram(&shShaders[3]);
@@ -183,7 +183,7 @@ void Game::Initialise()
 	// Create the skybox
 	// Skybox downloaded from http://www.akimbo.in/forum/viewtopic.php?f=10&t=9
 	m_pSkybox->Create(2500.0f);
-	
+
 	// Create the planar terrain
 	m_pPlanarTerrain->Create("resources\\textures\\", "grassfloor01.jpg", 2000.0f, 2000.0f, 50.0f); // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
 
@@ -220,11 +220,11 @@ void Game::Initialise()
 }
 
 // Render method runs repeatedly in a loop
-void Game::Render() 
+void Game::Render()
 {
-	
+
 	// Clear the buffers and enable depth testing (z-buffering)
-	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 
 	// Set up a matrix stack
@@ -232,14 +232,14 @@ void Game::Render()
 	modelViewMatrixStack.SetIdentity();
 
 	// Use the main shader program 
-	CShaderProgram *pMainProgram = (*m_pShaderPrograms)[0];
+	CShaderProgram* pMainProgram = (*m_pShaderPrograms)[0];
 	pMainProgram->UseProgram();
 	pMainProgram->SetUniform("bUseTexture", true);
 	pMainProgram->SetUniform("sampler0", 0);
 	// Note: cubemap and non-cubemap textures should not be mixed in the same texture unit.  Setting unit 10 to be a cubemap texture.
-	int cubeMapTextureUnit = 10; 
+	int cubeMapTextureUnit = 10;
 	pMainProgram->SetUniform("CubeMapTex", cubeMapTextureUnit);
-	
+
 
 	// Set the projection matrix
 	pMainProgram->SetUniform("matrices.projMatrix", m_pCamera->GetPerspectiveProjectionMatrix());
@@ -250,10 +250,10 @@ void Game::Render()
 	glm::mat4 viewMatrix = modelViewMatrixStack.Top();
 	glm::mat3 viewNormalMatrix = m_pCamera->ComputeNormalMatrix(viewMatrix);
 
-	
+
 	// Set light and materials in main shader program
 	glm::vec4 lightPosition1 = glm::vec4(-100, 100, -100, 1); // Position of light source *in world coordinates*
-	pMainProgram->SetUniform("light1.position", viewMatrix*lightPosition1); // Position of light source *in eye coordinates*
+	pMainProgram->SetUniform("light1.position", viewMatrix * lightPosition1); // Position of light source *in eye coordinates*
 	pMainProgram->SetUniform("light1.La", glm::vec3(1.0f));		// Ambient colour of light
 	pMainProgram->SetUniform("light1.Ld", glm::vec3(1.0f));		// Diffuse colour of light
 	pMainProgram->SetUniform("light1.Ls", glm::vec3(1.0f));		// Specular colour of light
@@ -261,25 +261,25 @@ void Game::Render()
 	pMainProgram->SetUniform("material1.Md", glm::vec3(0.0f));	// Diffuse material reflectance
 	pMainProgram->SetUniform("material1.Ms", glm::vec3(0.0f));	// Specular material reflectance
 	pMainProgram->SetUniform("material1.shininess", 15.0f);		// Shininess material property
-		
+
 
 	// Render the skybox and terrain with full ambient reflectance 
 	modelViewMatrixStack.Push();
-		pMainProgram->SetUniform("renderSkybox", true);
-		// Translate the modelview matrix to the camera eye point so skybox stays centred around camera
-		glm::vec3 vEye = m_pCamera->GetPosition();
-		modelViewMatrixStack.Translate(vEye);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pSkybox->Render(cubeMapTextureUnit);
-		pMainProgram->SetUniform("renderSkybox", false);
+	pMainProgram->SetUniform("renderSkybox", true);
+	// Translate the modelview matrix to the camera eye point so skybox stays centred around camera
+	glm::vec3 vEye = m_pCamera->GetPosition();
+	modelViewMatrixStack.Translate(vEye);
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pSkybox->Render(cubeMapTextureUnit);
+	pMainProgram->SetUniform("renderSkybox", false);
 	modelViewMatrixStack.Pop();
 
 	// Render the planar terrain
 	modelViewMatrixStack.Push();
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pPlanarTerrain->Render();
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pPlanarTerrain->Render();
 	modelViewMatrixStack.Pop();
 
 
@@ -299,8 +299,8 @@ void Game::Render()
 		m_pHorseMesh->Render();
 	modelViewMatrixStack.Pop();
 
-	
-	// Render the barrel 
+
+	// Render the barrel
 	modelViewMatrixStack.Push();
 		modelViewMatrixStack.Translate(glm::vec3(100.0f, 0.0f, 0.0f));
 		modelViewMatrixStack.Scale(5.0f);
@@ -309,24 +309,24 @@ void Game::Render()
 		m_pBarrelMesh->Render();
 	modelViewMatrixStack.Pop();
 	*/
-	
+
 	// Render the car
 	modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
-		modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 0.0f);
-		modelViewMatrixStack.Scale(1.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pCarMesh->Render();
+	modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
+	modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 0.0f);
+	modelViewMatrixStack.Scale(1.0f);
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pCarMesh->Render();
 	modelViewMatrixStack.Pop();
 
 	// Render the barrier
 	modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(20.0f, 0.0f, 0.0f));
-		modelViewMatrixStack.Scale(1.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pBarrierMesh->Render();
+	modelViewMatrixStack.Translate(glm::vec3(20.0f, 0.0f, 0.0f));
+	modelViewMatrixStack.Scale(1.0f);
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pBarrierMesh->Render();
 	modelViewMatrixStack.Pop();
 
 	/*
@@ -350,23 +350,23 @@ void Game::Render()
 
 	// Render the Pyramid
 	modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, -150.0f));
-		modelViewMatrixStack.Scale(1.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pPyramid->Render();
+	modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, -150.0f));
+	modelViewMatrixStack.Scale(1.0f);
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pPyramid->Render();
 	modelViewMatrixStack.Pop();
 
 	pMainProgram->SetUniform("bUseTexture", true);
 
 	// Render the cuboid
 	pMainProgram->SetUniform("bUseTexture", false);
-		modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(5.0f, 2.0f, -150.0f));  // Position it where you want
-		modelViewMatrixStack.Scale(1.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pCuboid->Render();
+	modelViewMatrixStack.Push();
+	modelViewMatrixStack.Translate(glm::vec3(5.0f, 2.0f, -150.0f));  // Position it where you want
+	modelViewMatrixStack.Scale(1.0f);
+	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+	m_pCuboid->Render();
 	modelViewMatrixStack.Pop();
 	pMainProgram->SetUniform("bUseTexture", true);
 
@@ -377,12 +377,12 @@ void Game::Render()
 	m_pCatmullRom->RenderTrack();
 
 	RenderHUD();
-		
+
 	// Draw the 2D graphics after the 3D graphics
 	DisplayFrameRate();
 
 	// Swap buffers to show the rendered image
-	SwapBuffers(m_gameWindow.Hdc());		
+	SwapBuffers(m_gameWindow.Hdc());
 
 }
 
@@ -396,7 +396,7 @@ void Game::Update()
 	else if (m_topDownView) {
 		// Provides a top down view
 		glm::vec3 cameraPos(65.0f, 220.0f, 70.0f);
-		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);  
+		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);
 		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
 		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
 
@@ -428,6 +428,10 @@ void Game::Update()
 	// Update the camera using the amount of time that has elapsed to avoid framerate dependent motion
 	m_pCamera->Update(m_dt);
 
+	if (m_isGameRunning) {
+		m_pPyramid->Update(m_dt);
+	}
+
 	m_pAudio->Update();
 
 	if (m_isGameRunning) {
@@ -442,7 +446,7 @@ void Game::DisplayFrameRate()
 {
 
 
-	CShaderProgram *fontProgram = (*m_pShaderPrograms)[1];
+	CShaderProgram* fontProgram = (*m_pShaderPrograms)[1];
 
 	RECT dimensions = m_gameWindow.GetDimensions();
 	int height = dimensions.bottom - dimensions.top;
@@ -454,13 +458,13 @@ void Game::DisplayFrameRate()
 	// Now we want to subtract the current time by the last time that was stored
 	// to see if the time elapsed has been over a second, which means we found our FPS.
 	if (m_elapsedTime > 1000)
-    {
+	{
 		m_elapsedTime = 0;
 		m_framesPerSecond = m_frameCount;
 
 		// Reset the frames per second
 		m_frameCount = 0;
-    }
+	}
 
 	if (m_framesPerSecond > 0) {
 		// Use the font shader program and render the text
@@ -485,14 +489,14 @@ void Game::GameLoop()
 		Render();
 	}
 	*/
-	
-	
+
+
 	// Variable timer
 	m_pHighResolutionTimer->Start();
 	Update();
 	Render();
 	m_dt = m_pHighResolutionTimer->Elapsed();
-	
+
 
 }
 
@@ -526,12 +530,12 @@ void Game::RenderHUD()
 }
 
 
-WPARAM Game::Execute() 
+WPARAM Game::Execute()
 {
 	m_pHighResolutionTimer = new CHighResolutionTimer;
 	m_gameWindow.Init(m_hInstance);
 
-	if(!m_gameWindow.Hdc()) {
+	if (!m_gameWindow.Hdc()) {
 		return 1;
 	}
 
@@ -539,20 +543,21 @@ WPARAM Game::Execute()
 
 	m_pHighResolutionTimer->Start();
 
-	
+
 	MSG msg;
 
-	while(1) {													
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) { 
-			if(msg.message == WM_QUIT) {
+	while (1) {
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if (msg.message == WM_QUIT) {
 				break;
 			}
 
-			TranslateMessage(&msg);	
+			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-		} else if (m_appActive) {
+		}
+		else if (m_appActive) {
 			GameLoop();
-		} 
+		}
 		else Sleep(200); // Do not consume processor power if application isn't active
 	}
 
@@ -561,7 +566,7 @@ WPARAM Game::Execute()
 	return(msg.wParam);
 }
 
-LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_param) 
+LRESULT Game::ProcessEvents(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
 {
 	LRESULT result = 0;
 
@@ -570,24 +575,24 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 
 	case WM_ACTIVATE:
 	{
-		switch(LOWORD(w_param))
+		switch (LOWORD(w_param))
 		{
-			case WA_ACTIVE:
-			case WA_CLICKACTIVE:
-				m_appActive = true;
-				m_pHighResolutionTimer->Start();
-				break;
-			case WA_INACTIVE:
-				m_appActive = false;
-				break;
+		case WA_ACTIVE:
+		case WA_CLICKACTIVE:
+			m_appActive = true;
+			m_pHighResolutionTimer->Start();
+			break;
+		case WA_INACTIVE:
+			m_appActive = false;
+			break;
 		}
 		break;
-		}
+	}
 
 	case WM_SIZE:
-			RECT dimensions;
-			GetClientRect(window, &dimensions);
-			m_gameWindow.SetDimensions(dimensions);
+		RECT dimensions;
+		GetClientRect(window, &dimensions);
+		m_gameWindow.SetDimensions(dimensions);
 		break;
 
 	case WM_PAINT:
@@ -597,7 +602,7 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 		break;
 
 	case WM_KEYDOWN:
-		switch(w_param) {
+		switch (w_param) {
 		case VK_ESCAPE:
 			PostQuitMessage(0);
 			break;
@@ -646,14 +651,14 @@ LRESULT Game::ProcessEvents(HWND window,UINT message, WPARAM w_param, LPARAM l_p
 	return result;
 }
 
-Game& Game::GetInstance() 
+Game& Game::GetInstance()
 {
 	static Game instance;
 
 	return instance;
 }
 
-void Game::SetHinstance(HINSTANCE hinstance) 
+void Game::SetHinstance(HINSTANCE hinstance)
 {
 	m_hInstance = hinstance;
 }
@@ -663,9 +668,9 @@ LRESULT CALLBACK WinProc(HWND window, UINT message, WPARAM w_param, LPARAM l_par
 	return Game::GetInstance().ProcessEvents(window, message, w_param, l_param);
 }
 
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE, PSTR, int) 
+int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE, PSTR, int)
 {
-	Game &game = Game::GetInstance();
+	Game& game = Game::GetInstance();
 	game.SetHinstance(hinstance);
 
 	return int(game.Execute());
