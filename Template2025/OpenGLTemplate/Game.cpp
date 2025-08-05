@@ -88,6 +88,7 @@ Game::Game()
 	m_startLightPositions[1] = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f);
 	m_startLightPositions[2] = glm::vec4(2.0f, 10.0f, 0.0f, 1.0f);
 
+	m_fogEnabled = false;
 }
 
 // Destructor
@@ -248,6 +249,9 @@ void Game::Render()
 	int cubeMapTextureUnit = 10;
 	pMainProgram->SetUniform("CubeMapTex", cubeMapTextureUnit);
 
+	pMainProgram->SetUniform("fogEnabled", m_fogEnabled);
+	pMainProgram->SetUniform("fogDensity", 0.015f);  // Fog thickness value
+	pMainProgram->SetUniform("fogColor", glm::vec3(0.5f, 0.5f, 0.5f));
 
 	// Set the projection matrix
 	pMainProgram->SetUniform("matrices.projMatrix", m_pCamera->GetPerspectiveProjectionMatrix());
@@ -714,6 +718,9 @@ LRESULT Game::ProcessEvents(HWND window, UINT message, WPARAM w_param, LPARAM l_
 				m_startLightStates = std::vector<bool>(3, false);
 				m_goLightActive = false;
 			}
+			break;
+		case 'C':
+			m_fogEnabled = !m_fogEnabled;
 			break;
 		}
 		break;

@@ -86,4 +86,5 @@ private:
 	glm::vec4 m_startLightPositions[3];
 	bool m_goLightActive;
 
+	bool m_fogEnabled;
 };
