@@ -39,16 +39,16 @@ void CCatmullRom::SetControlPoints()
 	// Set control points (m_controlPoints) here, or load from disk
 	m_controlPoints.clear();
 
-	const float trackHeight = 0.5f;
+	const float trackHeight = 0.f;
 
 	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 0.0f));
-	m_controlPoints.push_back(glm::vec3(100.0f, trackHeight, 0.0f));
-	m_controlPoints.push_back(glm::vec3(150.0f, trackHeight, 50.0f));
-	m_controlPoints.push_back(glm::vec3(150.0f, trackHeight, 100.0f));
-	m_controlPoints.push_back(glm::vec3(100.0f, trackHeight, 150.0f));
-	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 150.0f));
-	m_controlPoints.push_back(glm::vec3(-50.0f, trackHeight, 100.0f));
-	m_controlPoints.push_back(glm::vec3(-50.0f, trackHeight, 0.0f));
+	m_controlPoints.push_back(glm::vec3(200.0f, trackHeight, 0.0f));
+	m_controlPoints.push_back(glm::vec3(300.0f, trackHeight, 100.0f));
+	m_controlPoints.push_back(glm::vec3(300.0f, trackHeight, 200.0f));
+	m_controlPoints.push_back(glm::vec3(200.0f, trackHeight, 500.0f));
+	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 300.0f));
+	m_controlPoints.push_back(glm::vec3(-100.0f, trackHeight, 200.0f));
+	m_controlPoints.push_back(glm::vec3(-100.0f, trackHeight, 0.0f));
 	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 0.0f));
 
 	// Optionally, set upvectors (m_controlUpVectors, one for each control point as well)
@@ -197,7 +197,7 @@ void CCatmullRom::CreateCentreline()
 void CCatmullRom::CreateOffsetCurves()
 {
 	// Compute the offset curves, one left, and one right.  Store the points in m_leftOffsetPoints and m_rightOffsetPoints respectively
-	const float trackWidth = 10.0f; // Adjust this value for desired track width
+	const float trackWidth = 20.0f; // Adjust this value for desired track width
 
 	m_leftOffsetPoints.clear();
 	m_rightOffsetPoints.clear();

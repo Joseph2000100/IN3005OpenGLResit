@@ -209,7 +209,7 @@ void Game::Initialise()
 	m_pPyramid->Create(2.0f, 3.0f);
 
 	// Create a cuboid
-	m_pCuboid->Create(2.0f, 3.0f, 1.0f);
+	m_pCuboid->Create(2.0f, 1.5f, 4.0f);
 
 	// Create a sphere
 	m_pSphere->Create("resources\\textures\\", "dirtpile01.jpg", 25, 25);  // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
@@ -443,7 +443,7 @@ void Game::Update()
 	}
 	else if (m_topDownView) {
 		// Provides a top down view
-		glm::vec3 cameraPos(65.0f, 220.0f, 70.0f);
+		glm::vec3 cameraPos(0.0f, 520.0f, 0.0f);
 		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);
 		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
 		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
