@@ -39,7 +39,7 @@ void CCatmullRom::SetControlPoints()
 	// Set control points (m_controlPoints) here, or load from disk
 	m_controlPoints.clear();
 
-	const float trackHeight = 0.f;
+	const float trackHeight = 0.2f;
 
 	m_controlPoints.push_back(glm::vec3(0.0f, trackHeight, 0.0f));
 	m_controlPoints.push_back(glm::vec3(200.0f, trackHeight, 0.0f));
@@ -197,7 +197,7 @@ void CCatmullRom::CreateCentreline()
 void CCatmullRom::CreateOffsetCurves()
 {
 	// Compute the offset curves, one left, and one right.  Store the points in m_leftOffsetPoints and m_rightOffsetPoints respectively
-	const float trackWidth = 20.0f; // Adjust this value for desired track width
+	const float trackWidth = 20.0f; // Adjust to change track width
 
 	m_leftOffsetPoints.clear();
 	m_rightOffsetPoints.clear();
@@ -239,6 +239,7 @@ void CCatmullRom::CreateOffsetCurves()
 
 void CCatmullRom::CreateTrack()
 {
+	// Generate a VAO called m_vaoTrack and a VBO to get the offset curve points and indices on the graphics card
 	vector<glm::vec3> vertices;
 
 	// Create vertices for track segments
@@ -298,6 +299,7 @@ void CCatmullRom::RenderOffsetCurves()
 
 void CCatmullRom::RenderTrack()
 {
+	// Bind the VAO m_vaoTrack and render it
 	glBindVertexArray(m_vaoTrack);
 	glDrawArrays(GL_QUADS, 0, m_vertexCount);
 	glBindVertexArray(0);

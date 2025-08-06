@@ -33,8 +33,6 @@ private:
 	vector <CShaderProgram *> *m_pShaderPrograms;
 	CPlane *m_pPlanarTerrain;
 	CFreeTypeFont *m_pFtFont;
-	COpenAssetImportMesh *m_pBarrelMesh;
-	COpenAssetImportMesh *m_pHorseMesh;
 	COpenAssetImportMesh *m_pCarMesh;
 	COpenAssetImportMesh *m_pBarrierMesh;
 	CSphere *m_pSphere;
@@ -54,6 +52,7 @@ private:
 	float m_cameraRotation;
 	CCatmullRom* m_pCatmullRom;
 
+	// Camera view state
 	bool m_topDownView;
 	bool m_freeCamera;
 
@@ -80,6 +79,7 @@ private:
 	bool m_isGameRunning;
 	void RenderHUD();
 
+	// Start light members
 	bool m_startSequenceActive;
 	float m_startSequenceTimer;
 	std::vector<bool> m_startLightStates;

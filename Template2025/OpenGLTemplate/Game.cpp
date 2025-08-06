@@ -53,8 +53,6 @@ Game::Game()
 	m_pShaderPrograms = NULL;
 	m_pPlanarTerrain = NULL;
 	m_pFtFont = NULL;
-	m_pBarrelMesh = NULL;
-	m_pHorseMesh = NULL;
 	m_pCarMesh = NULL;
 	m_pBarrierMesh = NULL;
 	m_pSphere = NULL;
@@ -84,9 +82,9 @@ Game::Game()
 	m_startLightStates = std::vector<bool>(3, false);
 	m_goLightActive = false;
 
-	m_startLightPositions[0] = glm::vec4(-2.0f, 10.0f, 0.0f, 1.0f);
-	m_startLightPositions[1] = glm::vec4(0.0f, 10.0f, 0.0f, 1.0f);
-	m_startLightPositions[2] = glm::vec4(2.0f, 10.0f, 0.0f, 1.0f);
+	m_startLightPositions[0] = glm::vec4(15.0f, 5.0f, -148.0f, 1.0f);
+	m_startLightPositions[1] = glm::vec4(15.0f, 5.0f, -150.0f, 1.0f);
+	m_startLightPositions[2] = glm::vec4(15.0f, 5.0f, -152.0f, 1.0f);
 
 	m_fogEnabled = false;
 }
@@ -99,8 +97,6 @@ Game::~Game()
 	delete m_pSkybox;
 	delete m_pPlanarTerrain;
 	delete m_pFtFont;
-	delete m_pBarrelMesh;
-	delete m_pHorseMesh;
 	delete m_pCarMesh;
 	delete m_pBarrierMesh;
 	delete m_pSphere;
@@ -132,8 +128,6 @@ void Game::Initialise()
 	m_pShaderPrograms = new vector <CShaderProgram*>;
 	m_pPlanarTerrain = new CPlane;
 	m_pFtFont = new CFreeTypeFont;
-	m_pBarrelMesh = new COpenAssetImportMesh;
-	m_pHorseMesh = new COpenAssetImportMesh;
 	m_pCarMesh = new COpenAssetImportMesh;
 	m_pBarrierMesh = new COpenAssetImportMesh;
 	m_pSphere = new CSphere;
@@ -200,8 +194,6 @@ void Game::Initialise()
 	m_pFtFont->SetShaderProgram(pFontProgram);
 
 	// Load some meshes in OBJ format
-	//m_pBarrelMesh->Load("resources\\models\\Barrel\\Barrel02.obj");  // Downloaded from http://www.psionicgames.com/?page_id=24 on 24 Jan 2013
-	//m_pHorseMesh->Load("resources\\models\\Horse\\Horse2.obj");  // Downloaded from http://opengameart.org/content/horse-lowpoly on 24 Jan 2013
 	//m_pCarMesh->Load("resources\\models\\Car\\car.obj");  
 	//m_pBarrierMesh->Load("resources\\models\\Barrier\\cone.obj"); 
 
@@ -209,7 +201,7 @@ void Game::Initialise()
 	m_pPyramid->Create(2.0f, 3.0f);
 
 	// Create a cuboid
-	m_pCuboid->Create(2.0f, 1.5f, 4.0f);
+	m_pCuboid->Create(8.0f, 3.0f, 4.0f);
 
 	// Create a sphere
 	m_pSphere->Create("resources\\textures\\", "dirtpile01.jpg", 25, 25);  // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
@@ -307,7 +299,7 @@ void Game::Render()
 		// Render each light sphere
 		for (int i = 0; i < 3; i++) {
 			modelViewMatrixStack.Push();
-			modelViewMatrixStack.Translate(glm::vec3(-2.0f + i * 2.0f, 10.0f, 0.0f));
+			modelViewMatrixStack.Translate(glm::vec3(m_startLightPositions[i]));
 			modelViewMatrixStack.Scale(glm::vec3(0.3f));
 
 			if (m_goLightActive) {
@@ -337,27 +329,6 @@ void Game::Render()
 	}
 
 
-	// Render the horse 
-	/*modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
-		modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 180.0f);
-		modelViewMatrixStack.Scale(2.5f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pHorseMesh->Render();
-	modelViewMatrixStack.Pop();
-
-
-	// Render the barrel
-	modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(100.0f, 0.0f, 0.0f));
-		modelViewMatrixStack.Scale(5.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		m_pBarrelMesh->Render();
-	modelViewMatrixStack.Pop();
-	*/
-
 	// Render the car
 	modelViewMatrixStack.Push();
 	modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
@@ -377,18 +348,6 @@ void Game::Render()
 	m_pBarrierMesh->Render();
 	modelViewMatrixStack.Pop();
 
-	/*
-	// Render the sphere
-	modelViewMatrixStack.Push();
-		modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, 150.0f));
-		modelViewMatrixStack.Scale(2.0f);
-		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-		// To turn off texture mapping and use the sphere colour only (currently white material), uncomment the next line
-		//pMainProgram->SetUniform("bUseTexture", false);
-		m_pSphere->Render();
-	modelViewMatrixStack.Pop();
-	*/
 
 	pMainProgram->SetUniform("bUseTexture", false);  // Turn off texturing
 	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f, 0.5f, 0.2f));  // Ambient color (green-ish)
@@ -397,20 +356,20 @@ void Game::Render()
 	pMainProgram->SetUniform("material1.shininess", 50.0f);     // Shininess
 
 	// Render the Pyramid
-	modelViewMatrixStack.Push();
+	/*modelViewMatrixStack.Push();
 	modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, -150.0f));
 	modelViewMatrixStack.Scale(1.0f);
 	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
 	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
 	m_pPyramid->Render();
-	modelViewMatrixStack.Pop();
+	modelViewMatrixStack.Pop();*/
 
 	pMainProgram->SetUniform("bUseTexture", true);
 
 	// Render the cuboid
 	pMainProgram->SetUniform("bUseTexture", false);
 	modelViewMatrixStack.Push();
-	modelViewMatrixStack.Translate(glm::vec3(5.0f, 2.0f, -150.0f));  // Position it where you want
+	modelViewMatrixStack.Translate(glm::vec3(5.0f, 0.0f, -150.0f));
 	modelViewMatrixStack.Scale(1.0f);
 	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
 	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
@@ -449,8 +408,7 @@ void Game::Update()
 		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
 	}
 	else {
-
-		// Your existing camera update code for normal view
+		// In game view
 		glm::vec3 currentPos, nextPos;
 		m_pCatmullRom->Sample(m_currentDistance, currentPos);
 		m_pCatmullRom->Sample(m_currentDistance + 1.0f, nextPos);
@@ -487,7 +445,7 @@ void Game::Update()
 			m_startLightStates[2] = true;
 		}
 
-		// Flash all lights for "GO"
+		// Flash all lights green
 		if (m_startSequenceTimer >= 4.0f && !m_goLightActive) {
 			m_goLightActive = true;
 		}
@@ -519,7 +477,6 @@ void Game::Update()
 
 void Game::DisplayFrameRate()
 {
-
 
 	CShaderProgram* fontProgram = (*m_pShaderPrograms)[1];
 
