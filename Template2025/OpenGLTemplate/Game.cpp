@@ -53,8 +53,6 @@ Game::Game()
 	m_pShaderPrograms = NULL;
 	m_pPlanarTerrain = NULL;
 	m_pFtFont = NULL;
-	m_pCarMesh = NULL;
-	m_pBarrierMesh = NULL;
 	m_pSphere = NULL;
 	m_pPyramid = NULL;
 	m_pCuboid = NULL;
@@ -69,12 +67,12 @@ Game::Game()
 	m_gameTime = 0.0f;
 	m_playerSpeed = 0.0f;
 	m_isGameRunning = false;
-	m_topDownView = false;
+	m_topDownView = true;
 	m_freeCamera = false;
 
+	m_carCentrelineOffset = 0.0f;
+	m_carSpeed = 0.0f;
 	m_currentDistance = 0.0f;
-	m_cameraSpeed = 0.1f;
-	m_cameraRotation = 0.0f;
 	m_pCatmullRom = NULL;
 
 	m_startSequenceActive = false;
@@ -82,9 +80,9 @@ Game::Game()
 	m_startLightStates = std::vector<bool>(3, false);
 	m_goLightActive = false;
 
-	m_startLightPositions[0] = glm::vec4(15.0f, 5.0f, -148.0f, 1.0f);
-	m_startLightPositions[1] = glm::vec4(15.0f, 5.0f, -150.0f, 1.0f);
-	m_startLightPositions[2] = glm::vec4(15.0f, 5.0f, -152.0f, 1.0f);
+	m_startLightPositions[0] = glm::vec4(10.0f, 5.0f, -2.0f, 1.0f);
+	m_startLightPositions[1] = glm::vec4(10.0f, 5.0f, 0.0f, 1.0f);
+	m_startLightPositions[2] = glm::vec4(10.0f, 5.0f, 2.0f, 1.0f);
 
 	m_fogEnabled = false;
 }
@@ -97,8 +95,6 @@ Game::~Game()
 	delete m_pSkybox;
 	delete m_pPlanarTerrain;
 	delete m_pFtFont;
-	delete m_pCarMesh;
-	delete m_pBarrierMesh;
 	delete m_pSphere;
 	delete m_pAudio;
 	delete m_pCatmullRom;
@@ -128,8 +124,6 @@ void Game::Initialise()
 	m_pShaderPrograms = new vector <CShaderProgram*>;
 	m_pPlanarTerrain = new CPlane;
 	m_pFtFont = new CFreeTypeFont;
-	m_pCarMesh = new COpenAssetImportMesh;
-	m_pBarrierMesh = new COpenAssetImportMesh;
 	m_pSphere = new CSphere;
 	m_pPyramid = new CPyramid;
 	m_pCuboid = new CCuboid;
@@ -193,15 +187,11 @@ void Game::Initialise()
 	m_pFtFont->LoadSystemFont("arial.ttf", 32);
 	m_pFtFont->SetShaderProgram(pFontProgram);
 
-	// Load some meshes in OBJ format
-	//m_pCarMesh->Load("resources\\models\\Car\\car.obj");  
-	//m_pBarrierMesh->Load("resources\\models\\Barrier\\cone.obj"); 
-
 	// Create a pyramid
 	m_pPyramid->Create(2.0f, 3.0f);
 
 	// Create a cuboid
-	m_pCuboid->Create(8.0f, 3.0f, 4.0f);
+	m_pCuboid->Create(2.0f, 3.0f, 6.0f);
 
 	// Create a sphere
 	m_pSphere->Create("resources\\textures\\", "dirtpile01.jpg", 25, 25);  // Texture downloaded from http://www.psionicgames.com/?page_id=26 on 24 Jan 2013
@@ -315,7 +305,7 @@ void Game::Render()
 				pMainProgram->SetUniform("material1.Me", glm::vec3(5.0f, 0.0f, 0.0f));
 			}
 			else {
-				// Dark gray for off state
+				// Gray for off state
 				pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f));
 				pMainProgram->SetUniform("material1.Md", glm::vec3(0.2f));
 				pMainProgram->SetUniform("material1.Me", glm::vec3(0.0f));
@@ -329,59 +319,54 @@ void Game::Render()
 	}
 
 
-	// Render the car
-	modelViewMatrixStack.Push();
-	modelViewMatrixStack.Translate(glm::vec3(0.0f, 0.0f, 0.0f));
-	modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), 0.0f);
-	modelViewMatrixStack.Scale(1.0f);
-	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-	m_pCarMesh->Render();
-	modelViewMatrixStack.Pop();
-
-	// Render the barrier
-	modelViewMatrixStack.Push();
-	modelViewMatrixStack.Translate(glm::vec3(20.0f, 0.0f, 0.0f));
-	modelViewMatrixStack.Scale(1.0f);
-	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-	m_pBarrierMesh->Render();
-	modelViewMatrixStack.Pop();
-
-
-	pMainProgram->SetUniform("bUseTexture", false);  // Turn off texturing
-	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f, 0.5f, 0.2f));  // Ambient color (green-ish)
-	pMainProgram->SetUniform("material1.Md", glm::vec3(0.2f, 0.5f, 0.2f));  // Diffuse color (green-ish)
-	pMainProgram->SetUniform("material1.Ms", glm::vec3(1.0f));  // Specular color (white)
+	pMainProgram->SetUniform("bUseTexture", false);
+	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.2f, 0.5f, 0.2f));  // Ambient
+	pMainProgram->SetUniform("material1.Md", glm::vec3(0.2f, 0.5f, 0.2f));  // Diffuse
+	pMainProgram->SetUniform("material1.Ms", glm::vec3(1.0f));  // Specular
 	pMainProgram->SetUniform("material1.shininess", 50.0f);     // Shininess
-
-	// Render the Pyramid
-	/*modelViewMatrixStack.Push();
-	modelViewMatrixStack.Translate(glm::vec3(0.0f, 2.0f, -150.0f));
-	modelViewMatrixStack.Scale(1.0f);
-	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
-	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
-	m_pPyramid->Render();
-	modelViewMatrixStack.Pop();*/
 
 	pMainProgram->SetUniform("bUseTexture", true);
 
-	// Render the cuboid
+	// Render the track
+	m_pCatmullRom->RenderCentreline();
+	m_pCatmullRom->RenderOffsetCurves();
+	m_pCatmullRom->RenderTrack();
+
+	// Render the car
 	pMainProgram->SetUniform("bUseTexture", false);
 	modelViewMatrixStack.Push();
-	modelViewMatrixStack.Translate(glm::vec3(5.0f, 0.0f, -150.0f));
-	modelViewMatrixStack.Scale(1.0f);
+
+	// Get car's current position and next position
+	glm::vec3 carPos, up;
+	glm::vec3 nextPos;
+	m_pCatmullRom->Sample(m_currentDistance, carPos, up);
+	m_pCatmullRom->Sample(m_currentDistance + 0.1f, nextPos, up);
+
+	// Calculate forward direction and angle
+	glm::vec3 forward = glm::normalize(nextPos - carPos);
+	float angle = atan2(forward.x, forward.z);
+
+	// Apply lateral offset if needed
+	glm::vec3 right = glm::normalize(glm::cross(forward, up));
+	carPos += right * m_carCentrelineOffset;
+
+	// Set position and rotation
+	modelViewMatrixStack.Translate(carPos);
+	modelViewMatrixStack.Rotate(glm::vec3(0.0f, 1.0f, 0.0f), angle);
+
+	// Set blue color for the car
+	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.0f, 0.0f, 0.8f));
+	pMainProgram->SetUniform("material1.Md", glm::vec3(0.0f, 0.0f, 0.8f));
+	pMainProgram->SetUniform("material1.Ms", glm::vec3(0.8f));
+	pMainProgram->SetUniform("material1.shininess", 50.0f);
+
+	// Apply the transformation and render
 	pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
 	pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
 	m_pCuboid->Render();
 	modelViewMatrixStack.Pop();
 	pMainProgram->SetUniform("bUseTexture", true);
 
-
-	// Render the track
-	m_pCatmullRom->RenderCentreline();
-	m_pCatmullRom->RenderOffsetCurves();
-	m_pCatmullRom->RenderTrack();
 
 	RenderHUD();
 
@@ -402,32 +387,41 @@ void Game::Update()
 	}
 	else if (m_topDownView) {
 		// Provides a top down view
-		glm::vec3 cameraPos(0.0f, 520.0f, 0.0f);
-		glm::vec3 lookAtPoint(65.0f, 0.0f, 70.0f);
+		glm::vec3 cameraPos(0.0f, 520.0f, 230.0f);
+		glm::vec3 lookAtPoint(65.0f, 0.0f, 230.0f);
 		glm::vec3 upVector(0.0f, 0.0f, -1.0f);
 		m_pCamera->Set(cameraPos, lookAtPoint, upVector);
 	}
 	else {
-		// In game view
-		glm::vec3 currentPos, nextPos;
-		m_pCatmullRom->Sample(m_currentDistance, currentPos);
-		m_pCatmullRom->Sample(m_currentDistance + 1.0f, nextPos);
+		// Get car's position on track
+		glm::vec3 carPos, up;
+		glm::vec3 nextPos;
+		m_pCatmullRom->Sample(m_currentDistance, carPos, up);
+		m_pCatmullRom->Sample(m_currentDistance + 0.1f, nextPos);
 
-		// Calculate TNB frame
-		glm::vec3 T = glm::normalize(nextPos - currentPos);
-		glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		// Calculate forward and right vectors
+		glm::vec3 forward = glm::normalize(nextPos - carPos);
+		glm::vec3 right = glm::normalize(glm::cross(forward, up));
 
-		glm::vec3 rotatedUp = glm::rotate(worldUp, m_cameraRotation, T);
-		glm::vec3 N = glm::normalize(glm::cross(T, rotatedUp));
-		glm::vec3 B = glm::normalize(glm::cross(N, T));
+		// Apply lateral offset to car position
+		carPos += right * m_carCentrelineOffset;
 
-		glm::vec3 cameraPos = currentPos + B * 2.0f;
-		glm::vec3 lookAtPoint = currentPos + T * 10.0f;
+		// Position camera behind and above car
+		glm::vec3 cameraOffset = -forward * 15.0f; // 15 units behind
+		cameraOffset.y = 7.0f; // 7 units up
+		glm::vec3 cameraPos = carPos + cameraOffset;
 
-		m_pCamera->Set(cameraPos, lookAtPoint, rotatedUp);
+		// Look ahead of the car
+		glm::vec3 lookAtPos = carPos + forward * 5.0f;
 
-		// Only update distance when not in top-down view
-		m_currentDistance += m_dt * m_cameraSpeed;
+		// Update camera
+		m_pCamera->Set(cameraPos, lookAtPos, up);
+
+		// Update car position along track
+		if (m_isGameRunning) {
+			m_currentDistance += m_dt * m_carSpeed;
+			m_playerSpeed = m_carSpeed * 100.0f; // For display purposes
+		}
 	}
 
 	// Start Lights
@@ -448,6 +442,8 @@ void Game::Update()
 		// Flash all lights green
 		if (m_startSequenceTimer >= 4.0f && !m_goLightActive) {
 			m_goLightActive = true;
+			m_isGameRunning = true;
+			m_carSpeed = INITIAL_CAR_SPEED;
 		}
 
 		// End sequence and turn off lights
@@ -463,14 +459,11 @@ void Game::Update()
 
 	if (m_isGameRunning) {
 		m_pPyramid->Update(m_dt);
+		m_gameTime += (float)m_dt / 1000.0f;
 	}
 
 	m_pAudio->Update();
 
-	if (m_isGameRunning) {
-		m_gameTime += (float)m_dt / 1000.0f;
-	}
-	m_playerSpeed = 100;
 }
 
 
@@ -558,7 +551,7 @@ void Game::RenderHUD()
 	m_pFtFont->Render(20, height - 40, 20, "Time: %02d:%02d.%02d", minutes, seconds, milliseconds);
 
 	// Render speed in top right corner
-	m_pFtFont->Render(width - 200, height - 40, 20, "Speed: %.1f km/h", m_playerSpeed);
+	if (m_isGameRunning) { m_pFtFont->Render(width - 120, height - 20, 20, "Speed: %.1f", m_playerSpeed);}
 }
 
 
@@ -645,35 +638,31 @@ LRESULT Game::ProcessEvents(HWND window, UINT message, WPARAM w_param, LPARAM l_
 			m_pAudio->PlayEventSound();
 			break;
 		case VK_SPACE:
-			m_isGameRunning = !m_isGameRunning;
+			if (!m_startSequenceActive && !m_isGameRunning && !m_freeCamera) {
+				m_startSequenceActive = true;
+				m_startSequenceTimer = 0.0f;
+				m_startLightStates = std::vector<bool>(3, false);
+				m_goLightActive = false;
+				m_topDownView = false;
+			}
 			break;
 		case 'R':
 			m_gameTime = 0.0f;
 			break;
 		case VK_LEFT:
-			m_cameraRotation -= m_dt * 0.1f;
+			if (m_isGameRunning) {
+				m_carCentrelineOffset = glm::max(m_carCentrelineOffset - 0.5f, -MAX_CENTRELINE_OFFSET);
+			}
 			break;
 		case VK_RIGHT:
-			m_cameraRotation += m_dt * 0.1f;
-			break;
-		case VK_UP:
-			m_cameraSpeed += 0.01f;
-			break;
-		case VK_DOWN:
-			m_cameraSpeed = max(0.0f, m_cameraSpeed - 0.01f);
-			break;
-		case 'V':
-			m_topDownView = !m_topDownView;
+			if (m_isGameRunning) {
+				m_carCentrelineOffset = glm::min(m_carCentrelineOffset + 0.5f, MAX_CENTRELINE_OFFSET);
+			}
 			break;
 		case 'F':
-			m_freeCamera = !m_freeCamera;
-			break;
-		case 'S':
-			if (!m_startSequenceActive) {
-				m_startSequenceActive = true;
-				m_startSequenceTimer = 0.0f;
-				m_startLightStates = std::vector<bool>(3, false);
-				m_goLightActive = false;
+			if (!m_isGameRunning) {
+				m_topDownView = !m_topDownView;
+				m_freeCamera = !m_freeCamera;
 			}
 			break;
 		case 'C':

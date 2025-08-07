@@ -33,8 +33,6 @@ private:
 	vector <CShaderProgram *> *m_pShaderPrograms;
 	CPlane *m_pPlanarTerrain;
 	CFreeTypeFont *m_pFtFont;
-	COpenAssetImportMesh *m_pCarMesh;
-	COpenAssetImportMesh *m_pBarrierMesh;
 	CSphere *m_pSphere;
 	CPyramid *m_pPyramid;
 	CCuboid* m_pCuboid;
@@ -48,8 +46,10 @@ private:
 
 	// Track members
 	float m_currentDistance;
-	float m_cameraSpeed;
-	float m_cameraRotation;
+	float m_carCentrelineOffset;
+	float m_carSpeed;
+	const float INITIAL_CAR_SPEED = 0.1f;
+	const float MAX_CENTRELINE_OFFSET = 20.0f;
 	CCatmullRom* m_pCatmullRom;
 
 	// Camera view state
