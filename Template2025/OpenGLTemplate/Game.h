@@ -48,8 +48,9 @@ private:
 	float m_currentDistance;
 	float m_carCentrelineOffset;
 	float m_carSpeed;
-	const float INITIAL_CAR_SPEED = 0.1f;
-	const float MAX_CENTRELINE_OFFSET = 20.0f;
+	const float INITIAL_CAR_SPEED = 0.04f;
+	const float ACCELERATION = 0.00000f;
+	const float MAX_CENTRELINE_OFFSET = 18.0f;
 	CCatmullRom* m_pCatmullRom;
 
 	// Camera view state
@@ -75,9 +76,28 @@ private:
 	double m_elapsedTime;
 
 	float m_gameTime;
-	float m_playerSpeed;
 	bool m_isGameRunning;
 	void RenderHUD();
+
+	// Pickup system
+	void InitializePickups();
+	void UpdatePickups();
+
+	static const int NUM_PICKUPS = 20;
+	static const int PICKUP_HOVER_HEIGHT = 1;
+	static const int TRACK_WIDTH = 20;
+	const float PICKUP_INACTIVE_TIME = 1.0f;
+
+	struct Pickup {
+		glm::vec3 position;
+		float trackDistance;    // Distance along track
+		float lateralOffset;    // Distance from centreline
+		bool active;
+		float inactiveTimer;
+	};
+
+	vector<Pickup> m_pickups;
+	float m_lastCarDistance;
 
 	// Start light members
 	bool m_startSequenceActive;
@@ -87,4 +107,11 @@ private:
 	bool m_goLightActive;
 
 	bool m_fogEnabled;
+
+	// Lap time HUD component members
+	float m_currentLapTime;
+	float m_fastestLapTime;
+	int m_currentLap;
+	bool m_firstLapCompleted;
+
 };

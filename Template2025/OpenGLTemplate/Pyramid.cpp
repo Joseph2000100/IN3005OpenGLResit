@@ -134,9 +134,10 @@ void CPyramid::Update(float dt)
     m_blinkTimer += dt;
 
     // Toggle visibility every 0.5 seconds
-    if (m_blinkTimer >= 500.0f)
+    if (m_blinkTimer >= 50.0f)
     {
         m_blinkTimer = 0.0f;
         m_isVisible = !m_isVisible;
     }
 }
+

@@ -24,6 +24,8 @@ public:
 
 	bool Sample(float d, glm::vec3& p, glm::vec3& up = _dummy_vector); // Return a point on the centreline based on a certain distance along the control curve.
 
+    float GetTotalLength() const {return m_distances.back();}
+
 private:
     void SetControlPoints();
     void ComputeLengthsAlongControlPoints();

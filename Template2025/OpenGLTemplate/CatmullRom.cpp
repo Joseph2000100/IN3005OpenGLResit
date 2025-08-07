@@ -147,7 +147,6 @@ void CCatmullRom::UniformlySampleControlPoints(int numSamples)
 
 	}
 
-
 	// Repeat once more for truly equidistant points
 	m_controlPoints = m_centrelinePoints;
 	m_controlUpVectors = m_centrelineUpVectors;
@@ -239,16 +238,29 @@ void CCatmullRom::CreateOffsetCurves()
 
 void CCatmullRom::CreateTrack()
 {
-	// Generate a VAO called m_vaoTrack and a VBO to get the offset curve points and indices on the graphics card
 	vector<glm::vec3> vertices;
+	vector<glm::vec3> normals;
 
 	// Create vertices for track segments
 	for (size_t i = 0; i < m_centrelinePoints.size() - 1; ++i) {
-		// Add vertices for current segment
+		// Calculate normal (pointing upwards)
+		glm::vec3 normal(0.0f, 1.0f, 0.0f);
+
+		// First triangle
 		vertices.push_back(m_leftOffsetPoints[i]);
 		vertices.push_back(m_rightOffsetPoints[i]);
 		vertices.push_back(m_rightOffsetPoints[i + 1]);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
+
+		// Second triangle
+		vertices.push_back(m_leftOffsetPoints[i]);
+		vertices.push_back(m_rightOffsetPoints[i + 1]);
 		vertices.push_back(m_leftOffsetPoints[i + 1]);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
 	}
 
 	// Create and bind VAO
@@ -259,22 +271,29 @@ void CCatmullRom::CreateTrack()
 	m_trackVBO.Create();
 	m_trackVBO.Bind();
 
-	// Add data to VBO
+	// Add data to VBO - interleave vertices and normals
 	for (size_t i = 0; i < vertices.size(); i++) {
-		m_trackVBO.AddData(vertices.data() + i, sizeof(glm::vec3));
+		m_trackVBO.AddData(&vertices[i], sizeof(glm::vec3));
+		m_trackVBO.AddData(&normals[i], sizeof(glm::vec3));
 	}
 
 	m_trackVBO.UploadDataToGPU(GL_STATIC_DRAW);
 
 	// Set up vertex attributes
-	glEnableVertexAttribArray(0); // position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	GLsizei stride = 2 * sizeof(glm::vec3);  // Stride is size of vertex + normal
+
+	// Vertex positions
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, 0);
+
+	// Normal vectors
+	glEnableVertexAttribArray(2);  // Using location 2 for normals like in other objects
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)sizeof(glm::vec3));
 
 	m_vertexCount = vertices.size();
 
 	glBindVertexArray(0);
 }
-
 
 
 void CCatmullRom::RenderCentreline()
@@ -299,9 +318,8 @@ void CCatmullRom::RenderOffsetCurves()
 
 void CCatmullRom::RenderTrack()
 {
-	// Bind the VAO m_vaoTrack and render it
 	glBindVertexArray(m_vaoTrack);
-	glDrawArrays(GL_QUADS, 0, m_vertexCount);
+	glDrawArrays(GL_TRIANGLES, 0, m_vertexCount);
 	glBindVertexArray(0);
 }
 

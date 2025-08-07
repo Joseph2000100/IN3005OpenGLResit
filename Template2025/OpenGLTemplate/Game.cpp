@@ -65,7 +65,6 @@ Game::Game()
 	m_elapsedTime = 0.0f;
 
 	m_gameTime = 0.0f;
-	m_playerSpeed = 0.0f;
 	m_isGameRunning = false;
 	m_topDownView = true;
 	m_freeCamera = false;
@@ -75,14 +74,19 @@ Game::Game()
 	m_currentDistance = 0.0f;
 	m_pCatmullRom = NULL;
 
+	m_currentLapTime = 0.0f;
+	m_fastestLapTime = FLT_MAX;
+	m_currentLap = 0;
+	m_firstLapCompleted = false;
+
 	m_startSequenceActive = false;
 	m_startSequenceTimer = 0.0f;
 	m_startLightStates = std::vector<bool>(3, false);
 	m_goLightActive = false;
 
-	m_startLightPositions[0] = glm::vec4(10.0f, 5.0f, -2.0f, 1.0f);
+	m_startLightPositions[0] = glm::vec4(10.0f, 5.0f, -5.0f, 1.0f);
 	m_startLightPositions[1] = glm::vec4(10.0f, 5.0f, 0.0f, 1.0f);
-	m_startLightPositions[2] = glm::vec4(10.0f, 5.0f, 2.0f, 1.0f);
+	m_startLightPositions[2] = glm::vec4(10.0f, 5.0f, 5.0f, 1.0f);
 
 	m_fogEnabled = false;
 }
@@ -203,6 +207,8 @@ void Game::Initialise()
 	m_pCatmullRom->CreateOffsetCurves();
 	m_pCatmullRom->CreateTrack();
 
+	InitializePickups();
+
 	// Initialise audio and play background music
 	m_pAudio->Initialise();
 	m_pAudio->LoadEventSound("resources\\Audio\\Boing.wav");					// Royalty free sound from freesound.org
@@ -290,7 +296,7 @@ void Game::Render()
 		for (int i = 0; i < 3; i++) {
 			modelViewMatrixStack.Push();
 			modelViewMatrixStack.Translate(glm::vec3(m_startLightPositions[i]));
-			modelViewMatrixStack.Scale(glm::vec3(0.3f));
+			modelViewMatrixStack.Scale(glm::vec3(0.8f));
 
 			if (m_goLightActive) {
 				// Green for GO
@@ -327,10 +333,18 @@ void Game::Render()
 
 	pMainProgram->SetUniform("bUseTexture", true);
 
+	pMainProgram->SetUniform("bUseTexture", false);
+	pMainProgram->SetUniform("material1.Ma", glm::vec3(0.15f));  // Dark grey ambient
+	pMainProgram->SetUniform("material1.Md", glm::vec3(0.15f));  // Dark grey diffuse
+	pMainProgram->SetUniform("material1.Ms", glm::vec3(0.2f));   // Low specular
+	pMainProgram->SetUniform("material1.shininess", 10.0f);      // Low shininess for matte look
+
 	// Render the track
 	m_pCatmullRom->RenderCentreline();
 	m_pCatmullRom->RenderOffsetCurves();
 	m_pCatmullRom->RenderTrack();
+
+	pMainProgram->SetUniform("bUseTexture", true);
 
 	// Render the car
 	pMainProgram->SetUniform("bUseTexture", false);
@@ -367,6 +381,28 @@ void Game::Render()
 	modelViewMatrixStack.Pop();
 	pMainProgram->SetUniform("bUseTexture", true);
 
+	// Render the pickups
+	pMainProgram->SetUniform("bUseTexture", false);
+	for (const auto& pickup : m_pickups) {
+		modelViewMatrixStack.Push();
+
+		modelViewMatrixStack.Translate(pickup.position);
+		modelViewMatrixStack.Scale(3.0f);
+
+		// Set red color for pickups
+		pMainProgram->SetUniform("material1.Ma", glm::vec3(1.0f, 0.0f, 0.0f));
+		pMainProgram->SetUniform("material1.Md", glm::vec3(1.0f, 0.0f, 0.0f));
+		pMainProgram->SetUniform("material1.Ms", glm::vec3(1.0f));
+		pMainProgram->SetUniform("material1.shininess", 50.0f);
+
+		pMainProgram->SetUniform("matrices.modelViewMatrix", modelViewMatrixStack.Top());
+		pMainProgram->SetUniform("matrices.normalMatrix", m_pCamera->ComputeNormalMatrix(modelViewMatrixStack.Top()));
+
+		m_pPyramid->Render();
+
+		modelViewMatrixStack.Pop();
+	}
+	pMainProgram->SetUniform("bUseTexture", true);
 
 	RenderHUD();
 
@@ -417,11 +453,6 @@ void Game::Update()
 		// Update camera
 		m_pCamera->Set(cameraPos, lookAtPos, up);
 
-		// Update car position along track
-		if (m_isGameRunning) {
-			m_currentDistance += m_dt * m_carSpeed;
-			m_playerSpeed = m_carSpeed * 100.0f; // For display purposes
-		}
 	}
 
 	// Start Lights
@@ -460,7 +491,48 @@ void Game::Update()
 	if (m_isGameRunning) {
 		m_pPyramid->Update(m_dt);
 		m_gameTime += (float)m_dt / 1000.0f;
+
+		// Collision detection
+		glm::vec3 carPos, up;
+		m_pCatmullRom->Sample(m_currentDistance, carPos, up);
+
+		for (const auto& pickup : m_pickups) {
+			float distance = glm::distance(carPos, pickup.position);
+
+			if (distance < 1.5f && pickup.active) {
+				m_carSpeed *= 1.03;
+				break;
+			}
+		}
+		m_carSpeed += ACCELERATION * m_dt;
+		m_currentDistance += m_dt * m_carSpeed;
+
+		int newLap = m_pCatmullRom->CurrentLap(m_currentDistance);
+
+		// Check if we've completed a lap
+		if (newLap > m_currentLap) {
+			// Check if this is a new fastest lap
+			if (m_currentLapTime > 0.0f && m_currentLapTime < m_fastestLapTime) {
+				m_fastestLapTime = m_currentLapTime;
+			}
+
+			// Set first lap completed flag after checking the lap time
+			if (!m_firstLapCompleted) {
+				m_firstLapCompleted = true;
+			}
+
+			// Reset lap timer and speed
+			m_currentLapTime = 0.0f;
+			m_carSpeed = INITIAL_CAR_SPEED;
+		}
+
+		m_currentLap = newLap;
+
+		m_currentLapTime += m_dt / 1000.0f;
+
 	}
+
+	UpdatePickups();
 
 	m_pAudio->Update();
 
@@ -550,9 +622,88 @@ void Game::RenderHUD()
 	// Render time in top left corner
 	m_pFtFont->Render(20, height - 40, 20, "Time: %02d:%02d.%02d", minutes, seconds, milliseconds);
 
-	// Render speed in top right corner
-	if (m_isGameRunning) { m_pFtFont->Render(width - 120, height - 20, 20, "Speed: %.1f", m_playerSpeed);}
+	// Render current lap time
+	if (m_isGameRunning) {
+		minutes = (int)m_currentLapTime / 60;
+		seconds = (int)m_currentLapTime % 60;
+		milliseconds = (int)((m_currentLapTime - (int)m_currentLapTime) * 100);
+		m_pFtFont->Render(20, height - 60, 20, "Lap: %02d:%02d.%02d", minutes, seconds, milliseconds);
+
+		// Render fastest lap if one exists
+		if (m_fastestLapTime != FLT_MAX) {
+			minutes = (int)m_fastestLapTime / 60;
+			seconds = (int)m_fastestLapTime % 60;
+			milliseconds = (int)((m_fastestLapTime - (int)m_fastestLapTime) * 100);
+			m_pFtFont->Render(20, height - 80, 20, "Best: %02d:%02d.%02d", minutes, seconds, milliseconds);
+		}
+
+		// Render speed in top right corner
+		m_pFtFont->Render(width - 120, height - 20, 20, "Speed: %.1f", m_carSpeed * 100);
+	}
 }
+
+void Game::InitializePickups() {
+	m_pickups.clear();
+	float trackLength = m_pCatmullRom->GetTotalLength();
+	float spacing = trackLength / NUM_PICKUPS;
+
+	for (int i = 0; i < NUM_PICKUPS; i++) {
+
+		if (i * spacing < 10.0f) { 
+			continue;
+		}
+
+		Pickup pickup;
+		pickup.trackDistance = i * spacing;
+		pickup.lateralOffset = ((float)rand() / RAND_MAX - 0.5f) * TRACK_WIDTH;
+
+		glm::vec3 centerPos, up;
+		m_pCatmullRom->Sample(pickup.trackDistance, centerPos, up);
+
+		pickup.position = centerPos;
+		pickup.position.x += pickup.lateralOffset;
+		pickup.position.y += PICKUP_HOVER_HEIGHT;
+
+		pickup.active = true;
+		pickup.inactiveTimer = 0.0f;
+
+		m_pickups.push_back(pickup);
+	}
+	m_lastCarDistance = 0.0f;
+}
+
+void Game::UpdatePickups() {
+	for (auto& pickup : m_pickups) {
+		// Update inactive timer if pickup is inactive
+		if (!pickup.active) {
+			pickup.inactiveTimer += m_dt;
+			if (pickup.inactiveTimer >= PICKUP_INACTIVE_TIME) {
+				pickup.active = true;
+				pickup.inactiveTimer = 0.0f;
+			}
+		}
+
+		float distanceToPickup = pickup.trackDistance - m_currentDistance;
+
+		// Only process active pickups that we've just passed
+		if (pickup.active && distanceToPickup < -5.0f && m_lastCarDistance < pickup.trackDistance) {
+			pickup.active = false;  // Deactivate the pickup
+			pickup.inactiveTimer = 0.0f;
+
+			pickup.lateralOffset = ((float)rand() / RAND_MAX - 0.5f) * TRACK_WIDTH;
+
+			glm::vec3 centerPos, up;
+			m_pCatmullRom->Sample(pickup.trackDistance, centerPos, up);
+
+			pickup.position = centerPos;
+			pickup.position.x += pickup.lateralOffset;
+			pickup.position.y += PICKUP_HOVER_HEIGHT;
+		}
+	}
+	m_lastCarDistance = m_currentDistance;
+}
+
+
 
 
 WPARAM Game::Execute()
@@ -646,23 +797,33 @@ LRESULT Game::ProcessEvents(HWND window, UINT message, WPARAM w_param, LPARAM l_
 				m_topDownView = false;
 			}
 			break;
-		case 'R':
-			m_gameTime = 0.0f;
+		case 'T':
+			if (m_isGameRunning) {
+				m_isGameRunning = false;
+				m_topDownView = true;
+				m_freeCamera = false;
+				m_currentDistance = 0.0f;
+				m_carSpeed = 0.0f;
+				m_carCentrelineOffset = 0.0f;
+				m_currentLap = 0;
+				m_firstLapCompleted = false;
+				m_gameTime = 0.0f;
+			}
 			break;
 		case VK_LEFT:
 			if (m_isGameRunning) {
-				m_carCentrelineOffset = glm::max(m_carCentrelineOffset - 0.5f, -MAX_CENTRELINE_OFFSET);
+				m_carCentrelineOffset = glm::max(m_carCentrelineOffset - 1.5f, -MAX_CENTRELINE_OFFSET);
 			}
 			break;
 		case VK_RIGHT:
 			if (m_isGameRunning) {
-				m_carCentrelineOffset = glm::min(m_carCentrelineOffset + 0.5f, MAX_CENTRELINE_OFFSET);
+				m_carCentrelineOffset = glm::min(m_carCentrelineOffset + 1.5f, MAX_CENTRELINE_OFFSET);
 			}
 			break;
 		case 'F':
 			if (!m_isGameRunning) {
-				m_topDownView = !m_topDownView;
 				m_freeCamera = !m_freeCamera;
+				m_topDownView = !m_freeCamera;
 			}
 			break;
 		case 'C':
